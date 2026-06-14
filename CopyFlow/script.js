@@ -113,20 +113,20 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)
 /* ---------------- Overlay 动画工具 ---------------- */
 function showOverlay(overlay) {
     overlay.classList.remove('hidden');
+    overlay.classList.remove('anim-out');
     // 强制重排后触发进入动画
     overlay.offsetHeight;
-    overlay.classList.remove('anim-out');
     overlay.classList.add('anim-in');
 }
 
 function hideOverlay(overlay) {
     overlay.classList.remove('anim-in');
     overlay.classList.add('anim-out');
-    overlay.addEventListener('animationend', function handler() {
-        overlay.removeEventListener('animationend', handler);
+    // 动画结束后隐藏，使用 setTimeout 比 animationend 更可靠
+    setTimeout(() => {
         overlay.classList.add('hidden');
         overlay.classList.remove('anim-out');
-    }, { once: true });
+    }, 220);
 }
 
 /* ---------------- 设置与关于弹窗 ---------------- */
