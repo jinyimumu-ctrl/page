@@ -48,8 +48,9 @@ function normalizeMarkdown(text) {
 function splitText(text) {
     text = normalizeMarkdown(text);
 
-    // 仅句末标点触发换行；逗号、顿号、引号等不触发，除非单句达到最大字数
     const breakPunctuation = /[。！？]/;
+    // 可被前一句吸收的尾随标点（避免标点孤零零出现在下一行开头）
+    const trailingPunct = /[，。！？、；：""''「」『』（）《》【】…—～,\.!\?;:'"\)\]\}]/;
     const paragraphs = text.split(/\n+/).map(p => p.trim()).filter(p => p.length > 0);
     let result = [];
 
@@ -57,14 +58,26 @@ function splitText(text) {
         let raw = [];
         let current = "";
 
-        for (let ch of para) {
+        for (let i = 0; i < para.length; i++) {
+            let ch = para[i];
             current += ch;
-            if (current.length >= maxChars) {
-                raw.push(current);
-                current = "";
-            } else if (breakPunctuation.test(ch)) {
+
+            if (breakPunctuation.test(ch)) {
+                // 句末标点：在此断句
                 if (current.trim()) raw.push(current.trim());
                 current = "";
+            } else if (current.length >= maxChars) {
+                // 达到最大字数，向前吞并尾随标点
+                let j = i + 1;
+                while (j < para.length && trailingPunct.test(para[j])) {
+                    current += para[j];
+                    j++;
+                    // 遇到句末标点则吞入后停止
+                    if (breakPunctuation.test(para[j - 1])) break;
+                }
+                raw.push(current.trim());
+                current = "";
+                i = j - 1;
             }
         }
         if (current.trim()) raw.push(current.trim());
@@ -108,47 +121,20 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)
     applyTheme(e.matches ? 'dark' : 'light');
 });
 
-/* ---------------- Overlay 动画工具 ---------------- */
-function showOverlay(overlay) {
-    overlay.style.display = '';
-    overlay.classList.remove('hidden');
-    overlay.classList.remove('anim-out');
-    // 强制重排后触发进入动画
-    overlay.offsetHeight;
-    overlay.classList.add('anim-in');
-}
-
-function hideOverlay(overlay) {
-    overlay.classList.remove('anim-in');
-    overlay.classList.add('anim-out');
-    overlay.addEventListener('animationend', function handler() {
-        overlay.removeEventListener('animationend', handler);
-        overlay.classList.add('hidden');
-        overlay.classList.remove('anim-out');
-    }, { once: true });
-    // 兜底：600ms 后无论如何强制隐藏，防止 animationend 丢失
-    setTimeout(() => {
-        if (!overlay.classList.contains('hidden')) {
-            overlay.classList.add('hidden');
-            overlay.classList.remove('anim-out');
-        }
-    }, 600);
-}
-
 /* ---------------- 设置与关于弹窗 ---------------- */
 const settingsOverlay = document.getElementById('settingsOverlay');
 
 document.getElementById('settingsToggle').addEventListener('click', () => {
-    showOverlay(settingsOverlay);
+    settingsOverlay.classList.remove('hidden');
 });
 document.getElementById('settingsClose').addEventListener('click', () => {
-    hideOverlay(settingsOverlay);
+    settingsOverlay.classList.add('hidden');
 });
 settingsOverlay.addEventListener('click', (e) => {
-    if (e.target === settingsOverlay) hideOverlay(settingsOverlay);
+    if (e.target === settingsOverlay) settingsOverlay.classList.add('hidden');
 });
 document.getElementById('reEnterBtn').addEventListener('click', () => {
-    hideOverlay(settingsOverlay);
+    settingsOverlay.classList.add('hidden');
     reset();
 });
 
@@ -157,13 +143,13 @@ const agreementOverlay = document.getElementById('agreementOverlay');
 
 if (agreementOverlay) {
     document.getElementById('agreementBtn').addEventListener('click', () => {
-        showOverlay(agreementOverlay);
+        agreementOverlay.classList.remove('hidden');
     });
     document.getElementById('agreementClose').addEventListener('click', () => {
-        hideOverlay(agreementOverlay);
+        agreementOverlay.classList.add('hidden');
     });
     agreementOverlay.addEventListener('click', (e) => {
-        if (e.target === agreementOverlay) hideOverlay(agreementOverlay);
+        if (e.target === agreementOverlay) agreementOverlay.classList.add('hidden');
     });
 }
 
@@ -263,7 +249,13 @@ function start() {
 
     buildBgContent();
 
-    hideOverlay(document.getElementById('setupOverlay'));
+    const setupOverlay = document.getElementById('setupOverlay');
+    setupOverlay.classList.add('fade-out');
+    setupOverlay.addEventListener('animationend', function handler() {
+        setupOverlay.removeEventListener('animationend', handler);
+        setupOverlay.classList.add('hidden');
+        setupOverlay.classList.remove('fade-out');
+    }, { once: true });
     document.getElementById('display').style.display = 'block';
     document.getElementById('finished').style.display = 'none';
 
@@ -274,9 +266,8 @@ function start() {
     update();
 }
 
-function update() {
+function update(direction) {
     const prev = document.getElementById('prev');
-    const currentLine = document.getElementById('current');
     const currentText = document.getElementById('currentText');
     const next = document.getElementById('next');
 
@@ -291,7 +282,7 @@ function update() {
         mark.classList.remove('anim-pop');
         text.classList.remove('anim-up');
         sub.classList.remove('anim-up');
-        mark.offsetHeight; // 强制重排
+        mark.offsetHeight;
         mark.classList.add('anim-pop');
         text.style.animationDelay = '0.2s';
         text.classList.add('anim-up');
@@ -317,14 +308,15 @@ function update() {
 
     pageInput.value = index + 1;
 
-    // 三行切换动画
-    currentLine.classList.remove('line-flash');
-    prev.classList.remove('line-anim');
-    next.classList.remove('line-anim');
-    currentLine.offsetHeight; // 强制重排
-    currentLine.classList.add('line-flash');
-    prev.classList.add('line-anim');
-    next.classList.add('line-anim');
+    // 歌词式滚动动画（动文字不动边框和页码）
+    const dirClass = direction === 'backward' ? 'slide-down' : 'slide-up';
+    prev.classList.remove('slide-up', 'slide-down');
+    currentText.classList.remove('slide-up', 'slide-down', 'text-glow');
+    next.classList.remove('slide-up', 'slide-down');
+    currentText.offsetHeight; // 强制重排
+    prev.classList.add(dirClass);
+    currentText.classList.add(dirClass, 'text-glow');
+    next.classList.add(dirClass);
 
     /* ---- 底层地图：高亮当前句并滚动 ---- */
     const prevActive = document.querySelector('.bg-chunk.active');
@@ -346,19 +338,19 @@ function escapeHtml(str) {
 function next() {
     if (index < chunks.length) {
         index++;
-        update();
+        update('forward');
     }
 }
 
 function back() {
     if (index > 0) {
         index--;
-        update();
+        update('backward');
     }
 }
 
 function reset() {
-    showOverlay(document.getElementById('setupOverlay'));
+    document.getElementById('setupOverlay').classList.remove('hidden');
     document.getElementById('display').style.display = 'none';
     document.getElementById('finished').style.display = 'none';
 }
@@ -406,7 +398,7 @@ document.addEventListener('keydown', (e) => {
     if (agreementOverlay && !agreementOverlay.classList.contains('hidden')) {
         if (e.key === 'Escape') {
             e.preventDefault();
-            hideOverlay(agreementOverlay);
+            agreementOverlay.classList.add('hidden');
         }
         return;
     }
@@ -414,7 +406,7 @@ document.addEventListener('keydown', (e) => {
     if (!settingsOverlay.classList.contains('hidden')) {
         if (e.key === 'Escape') {
             e.preventDefault();
-            hideOverlay(settingsOverlay);
+            settingsOverlay.classList.add('hidden');
         }
         return; // 设置面板打开时不响应其他快捷键
     }

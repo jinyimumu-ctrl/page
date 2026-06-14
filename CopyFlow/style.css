@@ -764,94 +764,61 @@ body {
 
 /* ===================== 动画效果 ===================== */
 
-/* 弹窗卡片进入 */
-@keyframes cardEnter {
+/* 歌词式向上滚动（递进） */
+@keyframes lyricsSlideUp {
     from {
-        opacity: 0;
-        transform: scale(0.92) translateY(16px);
+        opacity: 0.4;
+        transform: translateY(0.45em);
     }
     to {
         opacity: 1;
-        transform: scale(1) translateY(0);
+        transform: translateY(0);
     }
 }
 
-/* 弹窗卡片退出 */
-@keyframes cardLeave {
+/* 歌词式向下滚动（回退） */
+@keyframes lyricsSlideDown {
     from {
-        opacity: 1;
-        transform: scale(1) translateY(0);
+        opacity: 0.4;
+        transform: translateY(-0.45em);
     }
     to {
-        opacity: 0;
-        transform: scale(0.92) translateY(16px);
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-/* 遮罩层淡入 */
-@keyframes overlayFadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+.prev-line.slide-up,
+.next-line.slide-up,
+#currentText.slide-up {
+    animation: lyricsSlideUp 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
-/* 遮罩层淡出 */
-@keyframes overlayFadeOut {
+.prev-line.slide-down,
+.next-line.slide-down,
+#currentText.slide-down {
+    animation: lyricsSlideDown 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/* 输入窗口淡出 */
+@keyframes fadeOut {
     from { opacity: 1; }
     to   { opacity: 0; }
 }
 
-.overlay.anim-in {
-    animation: overlayFadeIn 0.25s ease both;
-}
-.overlay.anim-in > div {
-    animation: cardEnter 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) both;
-}
-.overlay.anim-out {
-    animation: overlayFadeOut 0.2s ease both;
-}
-.overlay.anim-out > div {
-    animation: cardLeave 0.2s ease both;
+#setupOverlay.fade-out {
+    animation: fadeOut 0.3s ease both;
+    pointer-events: none;
 }
 
-/* 当前行切入脉冲 */
-@keyframes lineFlash {
-    0%   { filter: brightness(1.6); }
-    100% { filter: brightness(1); }
+/* 当前行文字微光 */
+@keyframes textGlow {
+    0%   { text-shadow: 0 0 18px var(--accent), 0 0 4px var(--accent); }
+    100% { text-shadow: 0 0 0px transparent, 0 0 0px transparent; }
 }
 
-.current-line.line-flash {
-    animation: lineFlash 0.45s ease-out;
-}
-
-/* 上一行淡入上移 */
-@keyframes prevSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* 下一行淡入下移 */
-@keyframes nextSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-12px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.prev-line.line-anim {
-    animation: prevSlideIn 0.4s ease-out both;
-}
-.next-line.line-anim {
-    animation: nextSlideIn 0.4s ease-out both;
+#currentText.text-glow {
+    animation: textGlow 0.8s ease-out;
 }
 
 /* 完成界面 — 勾号弹出 */
@@ -887,13 +854,13 @@ body {
 }
 
 /* 简约模式关闭所有动画 */
-[data-simple="true"] .overlay.anim-in,
-[data-simple="true"] .overlay.anim-out,
-[data-simple="true"] .overlay.anim-in > div,
-[data-simple="true"] .overlay.anim-out > div,
-[data-simple="true"] .current-line.line-flash,
-[data-simple="true"] .prev-line.line-anim,
-[data-simple="true"] .next-line.line-anim,
+[data-simple="true"] .prev-line.slide-up,
+[data-simple="true"] .prev-line.slide-down,
+[data-simple="true"] .next-line.slide-up,
+[data-simple="true"] .next-line.slide-down,
+[data-simple="true"] #currentText.slide-up,
+[data-simple="true"] #currentText.slide-down,
+[data-simple="true"] #currentText.text-glow,
 [data-simple="true"] #finished .mark.anim-pop,
 [data-simple="true"] #finished .text.anim-up,
 [data-simple="true"] #finished .sub.anim-up,
