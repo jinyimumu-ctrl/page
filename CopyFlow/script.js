@@ -105,13 +105,12 @@ document.getElementById('themeToggle').addEventListener('click', () => {
 });
 
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-    if (!localStorage.getItem('copyHelperTheme')) {
-        applyTheme(e.matches ? 'dark' : 'light');
-    }
+    applyTheme(e.matches ? 'dark' : 'light');
 });
 
 /* ---------------- Overlay 动画工具 ---------------- */
 function showOverlay(overlay) {
+    overlay.style.display = '';
     overlay.classList.remove('hidden');
     overlay.classList.remove('anim-out');
     // 强制重排后触发进入动画
@@ -122,11 +121,18 @@ function showOverlay(overlay) {
 function hideOverlay(overlay) {
     overlay.classList.remove('anim-in');
     overlay.classList.add('anim-out');
-    // 动画结束后隐藏，使用 setTimeout 比 animationend 更可靠
-    setTimeout(() => {
+    overlay.addEventListener('animationend', function handler() {
+        overlay.removeEventListener('animationend', handler);
         overlay.classList.add('hidden');
         overlay.classList.remove('anim-out');
-    }, 220);
+    }, { once: true });
+    // 兜底：600ms 后无论如何强制隐藏，防止 animationend 丢失
+    setTimeout(() => {
+        if (!overlay.classList.contains('hidden')) {
+            overlay.classList.add('hidden');
+            overlay.classList.remove('anim-out');
+        }
+    }, 600);
 }
 
 /* ---------------- 设置与关于弹窗 ---------------- */
